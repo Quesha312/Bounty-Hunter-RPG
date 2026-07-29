@@ -497,8 +497,8 @@ html.dark {
     var el = document.getElementById('cc-oops');
     if (!el) {
       el = document.createElement('div'); el.id = 'cc-oops';
-      el.style.cssText = 'position:fixed;inset:12px;z-index:99999;background:#fff;border:1px solid #d4d4d8;border-radius:12px;padding:20px;font-family:system-ui,-apple-system,sans-serif;color:#27272a;';
-      el.innerHTML = '<h2 style="margin:0 0 6px;font-size:16px;font-weight:600">This app stopped running</h2><p style="margin:0 0 12px;font-size:14px;color:#52525b">Share the details below in the chat to fix it.</p><pre style="margin:0;padding:8px;background:#f4f4f5;border-radius:6px;overflow:auto;font-size:12px;"></pre>';
+      el.style.cssText = 'position:fixed;inset:12px;z-index:99999;background:#fff;border:1px solid #d4d4d8;border-radius:12px;padding:20px;font-family:system-ui,-apple-system,sans-serif;color:#27272a;overflow:auto;box-shadow:0 4px 16px rgba(0,0,0,.08)';
+      el.innerHTML = '<h2 style="margin:0 0 6px;font-size:16px;font-weight:600">This app stopped running</h2><p style="margin:0 0 12px;font-size:14px;color:#52525b">Share the details below in the chat and the assistant can fix it.</p><pre style="white-space:pre-wrap;background:#f4f4f5;border:1px solid #e4e4e7;padding:10px;border-radius:8px;font-size:12px;line-height:1.5;margin:0"></pre>';
       (document.body || document.documentElement).appendChild(el);
     }
     el.querySelector('pre').textContent += msg + '\n';
@@ -660,32 +660,14 @@ function goTo(nodeFn){
   nodeFn();
 }
 
-// ---------- Initialization ----------
-state = load() || freshState();
-if (!state.ending) {
-  goTo(briefing);
-}
-
-// Restart button handler
-document.getElementById('restart-btn').addEventListener('click', () => {
-  // Clear the save completely
-  try { localStorage.removeItem(SAVE_KEY); } catch(e){}
-  
-  // Reset to fresh state
-  state = freshState();
-  
-  // Go to briefing
-  goTo(briefing);
-});
-
 // ---------- Scenes ----------
 
 function briefing(){
   renderScene(
     'The Bond Office',
-    `Ray Calloway slides a manila folder across a desk that's seen better decades. "Danny Rourke. Logistics director over at Meridian Construction — cooked the books for two years, walked with $2.3 million. The bond's $150,000. You bring him in, you're golden. You don't, I'm out cold."
+    `Ray Calloway slides a manila folder across a desk that's seen better decades. "Danny Rourke. Logistics director over at Meridian Construction — cooked the books for two years, walked with $2.3 million before anyone caught the smell. Posted bail, and three days before sentencing, he's gone."
 
-He taps the folder. "You've got twenty days before this bond forfeits and I'm out a hundred fifty grand. Girlfriend, sister, an old army buddy, coworkers, an apartment nobody's cleaned out. Start somewhere. Ask someone. He's out there."
+He taps the folder. <span class="em">"You've got twenty days before this bond forfeits and I'm out a hundred fifty grand. Girlfriend, sister, an old army buddy, coworkers, an apartment nobody's cleaned out, a storage unit under a shell company, DMV records — that's what we've got. Somewhere in there is where he actually is. Most of it's noise. Find the signal, and don't waste days chasing your own tail."</span>
 
 You flip open the folder. Photo, last known address, associates. Time to go to work.`,
     [
@@ -710,8 +692,8 @@ function hub(){
   ];
 
   const nextDay = dayInfo((MAX_MOVES - state.moves) + 1);
-  let dayNote = `<span class="${nextDay.isSunday ? 'sun' : ''}">Next move lands on Week ${nextDay.week}, ${nextDay.dayName}${nextDay.isSunday ? ' — visiting hours are open at Golden Oaks today, if you know what to ask.' : ''}</span>`;
-  
+  let dayNote = `<span class="${nextDay.isSunday ? 'sun' : ''}">Next move lands on Week ${nextDay.week}, ${nextDay.dayName}${nextDay.isSunday ? ' — visiting hours are open at Golden Oaks today, if you're ready.' : '.'}</span>`;
+
   let html = `You're back at the case board. <span class="em">${state.moves}</span> move${state.moves===1?'':'s'} left before Ray writes this off. Where do you spend it?`;
   if (state.moves === 1) {
     html += ` <span class="em">This is your last move — spend it investigating and the clock runs out with nobody in cuffs. If you're ready, apprehend now instead.</span>`;
@@ -753,91 +735,641 @@ function hub(){
   save();
 }
 
-// Placeholder functions for missing scenes
-function endTimeout() {
+// --- Carla (decoy, single-note) ---
+function carlaNode(){
+  if (hasClue('cabin_lead')) {
+    return renderScene("Carla Simms' Apartment",
+      `Carla opens the door, sees it's you again, and doesn't invite you in. "I already told you everything. The cabin. That's it." There's nothing new here — she's said her piece.`,
+      [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+  }
   renderScene(
-    'Case Closed',
-    `Time's up. The bond forfeits. Danny Rourke disappeared without a trace.`,
-    [{ label: '↺ Restart Case', action: () => location.reload() }]
-  );
-  state.ending = 'timeout';
-}
-
-function apprehendMenu() {
-  renderScene(
-    'Ready to Apprehend',
-    `You're about to call this in. Last chance to reconsider.`,
+    "Carla Simms' Apartment",
+    `Carla answers the door in a paint-stained sweatshirt, eyes red like she's been crying on and off for days. She still keeps his photo on the fridge.`,
     [
-      { label: 'Call it in.', action: () => goTo(hub) },
-      { label: 'Back to investigating.', action: () => goTo(hub) }
+      { label: 'Sit with her. Let her talk at her own pace.', action: () => {
+          addClue('cabin_lead');
+          renderScene("Carla Simms' Apartment",
+            `She makes tea neither of you drinks. "He called me before he left. Said he was going up to his cousin's place — the lake cabin, out past Millbrook. Said he just needed to think." She believes every word of it. <span class="em">"Please don't hurt him."</span>
+
+You write down the address. Whether it's true is another matter.`,
+            [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+      }},
+      { label: 'Press her — flash the bounty photo, ask where he really is.', action: () => {
+          addClue('cabin_lead');
+          renderScene("Carla Simms' Apartment",
+            `She flinches at the photo like you slapped her. "The lake cabin. Millbrook. That's all I know, I swear —" Her voice cracks and she shuts the door. Through the wall you hear her already dialing someone.
+
+You have the same address as before. You're just fairly sure she's rattled enough to mention this visit to somebody.`,
+            [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+      }},
     ]
   );
 }
 
-function carlaNode(){
-  renderScene(
-    "Carla Simms' Apartment",
-    `Carla answers the door in a paint-stained sweatshirt.`,
-    [{ label: 'Back to the case board →', action: () => goTo(hub) }]
-  );
-}
-
+// --- Apartment (real, two-stage) ---
 function apartmentNode(){
+  const stage = stageOf('apartment');
+  if (stage >= 2 && hasClue('pharmacy_receipt')) {
+    return renderScene("Danny's Old Apartment",
+      `The apartment's been re-keyed for a new tenant. There's nothing left here for you — whatever this place had to say, it already told you.`,
+      [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+  }
+  if (stage >= 2) {
+    return renderScene("Danny's Old Apartment",
+      `The landlord won't let you back in. "You already had your fifteen minutes. Get a warrant next time." That door's closed for good.`,
+      [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+  }
+  if (stage === 2 && hasClue('pharmacy_receipt')) {
+    // unreachable branch guard, handled above
+  }
+  if (stage === 1 && hasClue('pharmacy_receipt')) {
+    return renderScene("Danny's Old Apartment",
+      `You're back for a closer look, receipt already in hand.`,
+      [
+        { label: 'Canvass the neighbors before you go.', action: () => {
+            addClue('golden_oaks_confirmed');
+            renderScene("Danny's Old Apartment",
+              `An elderly neighbor two doors down remembers an ambulance call a while back — nothing serious, she says, "but the paramedics mentioned they were taking him over to Golden Oaks, the place off Ridgeline." She assumed it was for Danny. It wasn't.
+
+You now have a name for the building, not just a pharmacy two blocks from it.`,
+              [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+        }},
+      ]
+    );
+  }
+  if (stage === 1) {
+    return renderScene("Danny's Old Apartment",
+      `You're back, and the landlord's less thrilled to see you this time. "Nothing's changed since Tuesday." He's not wrong — there's nothing new to find here without a better idea of what you're looking for.`,
+      [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+  }
   renderScene(
     "Danny's Old Apartment",
-    `The landlord lets you in with a warning about the time limit.`,
-    [{ label: 'Back to the case board →', action: () => goTo(hub) }]
+    `The landlord lets you in with a warning: "Fifteen minutes, and don't wreck the place — I've still got to rent it." The apartment is half-packed, like he left in a hurry but not a panic.`,
+    [
+      { label: 'Search carefully and quietly — drawers, trash, medicine cabinet.', action: () => {
+          addClue('pharmacy_receipt');
+          renderScene("Danny's Old Apartment",
+            `In the kitchen trash, folded small: a pharmacy receipt. <span class="em">Corner Drug Pharmacy — Sinemet 250mg, filled for "W. Kessler."</span> Not Danny's name. Not anyone you've heard of yet. But it's recent — three weeks old — and Corner Drug is two blocks from a senior living facility.
+
+You pocket it. It doesn't tell you where Danny is. It might tell you where he keeps going. Worth a second visit to press on it.`,
+            [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+      }},
+      { label: 'Move fast — toss the place, drawers and all, no time to be delicate.', action: () => {
+          renderScene("Danny's Old Apartment",
+            `You're three drawers in when a neighbor bangs on the wall, then the landlord's phone rings — someone reported "a break-in." He hustles you out before you've found anything but old take-out menus.
+
+You leave empty-handed. The move's spent.`,
+            [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+      }},
+    ]
   );
 }
 
+// --- Diner (real, two-stage) ---
 function dinerNode(){
+  const stage = stageOf('diner');
+  if (stage >= 2) {
+    return renderScene('The Wagon Wheel Diner',
+      hasClue('rosa_tip')
+        ? `Rosa waves from the register. "Told you what I know, hon." There's nothing more to pull from her — she's already given you the good stuff.`
+        : `Rosa's still cool toward you. She refills your coffee without a word and moves on. That door's shut.`,
+      [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+  }
+  if (stage === 1 && hasClue('rosa_tip')) {
+    return renderScene('The Wagon Wheel Diner',
+      `You slide back onto the same stool. Rosa's warmed up to you.`,
+      [
+        { label: 'Buy her a slice of pie, ask a little more about his routine.', action: () => {
+            addClue('rosa_time');
+            renderScene('The Wagon Wheel Diner',
+              `She thinks about it over the register tape. "Always before the church crowd — 8:45, maybe 8:50. Regular as anything." She slides you a free refill. "Hope he's alright."
+
+An exact window now, not just "Sunday morning."`,
+              [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+        }},
+      ]
+    );
+  }
+  if (stage === 1) {
+    return renderScene('The Wagon Wheel Diner',
+      `Rosa's still guarded from last time. She's polite, professional, and gives you nothing beyond the check.`,
+      [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+  }
   renderScene(
     'The Wagon Wheel Diner',
-    `Rosa works the counter like she has for eleven years.`,
-    [{ label: 'Back to the case board →', action: () => goTo(hub) }]
+    `A waitress named Rosa refills coffee cups without being asked. She's worked this counter for eleven years and knows every regular by their order.`,
+    [
+      { label: "Order coffee, sit at the counter, talk like a regular — no photo, no pressure.", action: () => {
+          addClue('rosa_tip');
+          renderScene('The Wagon Wheel Diner',
+            `You ask about the neighborhood, mention you're trying to track down an old coworker. Rosa relaxes. <span class="em">"Danny? Sweet guy, quiet tipper. Used to come in every Sunday morning, regular as church — coffee and a cinnamon roll, always to go. Said it was for his dad."</span> She hasn't seen him in a few weeks, though. "Figured he moved."
+
+Sunday morning. For his dad. That's not nothing — and she might say more if you come back friendly.`,
+            [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+      }},
+      { label: "Show the bounty photo, ask straight out if she's seen him.", action: () => {
+          renderScene('The Wagon Wheel Diner',
+            `Rosa's face closes like a shop at closing time. "I don't rat out good customers to strangers waving photos." She tops off a coffee three stools down and doesn't come back to your end of the counter.
+
+Nothing. The move's spent, and you're not sure she'll warm up next time either.`,
+            [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+      }},
+    ]
   );
 }
 
+// --- Depot / Delgado (decoy, debunkable) ---
 function depotNode(){
+  if (hasClue('el_paso_lead') && hasClue('el_paso_debunked')) {
+    return renderScene('Bus Depot / Mike Delgado',
+      `Nothing new at the depot, and Mike's stopped answering your calls. You've gotten what this lead has to give.`,
+      [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+  }
   renderScene(
     'Bus Depot / Mike Delgado',
-    `The depot keeps records. Mike is somewhere in this building.`,
-    [{ label: 'Back to the case board →', action: () => goTo(hub) }]
+    `The case file lists Mike Delgado, Danny's old Army buddy, as a known associate. There's also a ticket counter that keeps records.`,
+    [
+      { label: 'Check the depot ticket records first.', action: () => {
+          addClue('el_paso_lead');
+          renderScene('Bus Depot / Mike Delgado',
+            `The clerk pulls it up: a one-way ticket to El Paso, paid cash, purchased under Rourke's name. "Description sort of matches, sort of doesn't — ballcap, kept his head down." A cell ping near the terminal backs it up.
+
+Looks solid. Almost too solid.`,
+            [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+      }},
+      { label: 'Skip the counter — go lean on Mike Delgado directly.', action: () => {
+          addClue('el_paso_debunked');
+          renderScene('Bus Depot / Mike Delgado',
+            `Mike won't meet your eyes. After a long silence he exhales. <span class="em">"He asked me to buy a ticket in his name and carry his old phone on the bus. Told me not to say anything. I don't know where he actually went — I swear to God I don't."</span>
+
+The El Paso trail is a plant. Whatever he wants people to think, it isn't that.`,
+            [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+      }},
+    ]
   );
 }
 
+// --- Storage (decoy, debunkable) ---
 function storageNode(){
+  if (hasClue('storage_lead') && hasClue('storage_debunked')) {
+    return renderScene('Public Storage Records',
+      `The unit's already been cleared out by the facility. Nothing left to look at.`,
+      [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+  }
   renderScene(
     'Public Storage Records',
-    `A unit under an LLC. Easy to trace, if you know what to look for.`,
-    [{ label: 'Back to the case board →', action: () => goTo(hub) }]
+    `A county clerk helps you trace an LLC to a self-storage unit on the edge of town. The gate code still works — barely.`,
+    [
+      { label: "Open the unit and take it at face value.", action: () => {
+          addClue('storage_lead');
+          renderScene('Public Storage Records',
+            `The unit's cracked open. Inside: a smashed burner phone, an empty duffel, a few loose bills scattered on the floor. It looks exactly like a man grabbed his real bag and ran days ago.
+
+Case could be closed right here, if you believe what you're looking at.`,
+            [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+      }},
+      { label: "Look closer before you believe it — check the dust, the arrangement.", action: () => {
+          addClue('storage_debunked');
+          renderScene('Public Storage Records',
+            `Something's off. The dust on the shelf is undisturbed except where the duffel sat — like it was placed, not grabbed. The phone's smashed a little too cleanly. This wasn't a man fleeing. This was a man leaving something for someone to find.
+
+Whoever built this scene wanted it found. That should worry you more than comfort you.`,
+            [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+      }},
+    ]
   );
 }
 
+// --- Angela (real, two-stage, risk) ---
 function angelaNode(){
+  const stage = stageOf('angela');
+  if (state.dannyWarned && stage >= 2) {
+    return renderScene("Angela Rourke's House",
+      `She doesn't answer the door anymore. There's a car in the driveway and the porch light's on, but you already burned this bridge.`,
+      [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+  }
+  if (stage >= 2) {
+    return renderScene("Angela Rourke's House",
+      `Angela's said what she's going to say. She's civil, but there's nothing left to pull loose here.`,
+      [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+  }
+  if (stage === 1 && hasClue('kessler_name')) {
+    return renderScene("Angela Rourke's House",
+      `She lets you in this time, as far as the kitchen table, at least.`,
+      [
+        { label: 'Ask gently what he\'s most afraid of, if it ever comes to this.', action: () => {
+            addClue('angela_goodwill');
+            renderScene("Angela Rourke's House",
+              `She's quiet for a while before she answers. <span class="em">"He told me once — if it ever came to this, all he wanted was five minutes to say goodbye to Dad first. Not to run. Just that."</span> She looks at you like she's daring you to make that hard for him.
+
+You didn't need to know that. You're glad you do.`,
+              [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+        }},
+      ]
+    );
+  }
+  if (stage === 1) {
+    return renderScene("Angela Rourke's House",
+      `Same chained door, same short answer: "I told you to talk to my lawyer." She's not budging.`,
+      [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+  }
   renderScene(
     "Angela Rourke's House",
-    `Danny's sister opens the door cautiously.`,
-    [{ label: 'Back to the case board →', action: () => goTo(hub) }]
+    `Danny's sister opens the door on the chain first. She's got their father's stubborn jaw and none of Danny's patience for strangers.`,
+    [
+      { label: '"I\'m not here to hurt him — I just need to close this quietly."', action: () => {
+          addClue('kessler_name');
+          renderScene("Angela Rourke's House",
+            `She studies you a long moment, then takes the chain off — but doesn't invite you in. <span class="em">"Dad goes by Kessler now. Mom's maiden name. Danny set it up years ago, for privacy, long before any of this. Leave him out of it — he doesn't understand what's happening, and I want it to stay that way."</span>
+
+She shuts the door, but gently this time. You have a name that isn't in any file: Kessler.`,
+            [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+      }},
+      { label: 'Lean on her — mention accessory charges, jail time, make it clear there\'s a cost to silence.', action: () => {
+          state.dannyWarned = true;
+          renderScene("Angela Rourke's House",
+            `Her face goes flat and cold. "Talk to my lawyer." The door closes, and through the front window you see her already reaching for her phone before you're off the porch.
+
+You got nothing. And you have a bad feeling about what that phone call is going to say.`,
+            [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+      }},
+    ]
   );
 }
 
+// --- Meridian Construction HR (decoy + alt-real) ---
 function meridianNode(){
+  if (hasClue('canada_lead') && hasClue('kessler_name')) {
+    return renderScene('Meridian Construction HR',
+      `HR's already pulled everything they're willing to pull, and the break room gossip's dried up. Nothing new here.`,
+      [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+  }
   renderScene(
     'Meridian Construction HR',
-    `The records are here, locked behind file cabinets and corporate NDAs.`,
-    [{ label: 'Back to the case board →', action: () => goTo(hub) }]
+    `Danny's old employer still has a cubicle with his nameplate half peeled off. HR is cooperative in the vague, liability-conscious way companies get when a former employee is a fugitive.`,
+    [
+      { label: 'Call in a favor — ask HR to pull his benefits/dependent file.', action: () => {
+          addClue('kessler_name');
+          renderScene('Meridian Construction HR',
+            `The HR rep hesitates, then quietly prints a page. "His emergency contact and dependent listing — a Walter Kessler, relationship: father." She slides it across like she's not sure she should. "Off the record, obviously."
+
+Same name Angela might have given you, from a source who has no idea it's a secret.`,
+            [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+      }},
+      { label: 'Skip the paperwork — ask his old coworkers what they heard.', action: () => {
+          addClue('canada_lead');
+          renderScene('Meridian Construction HR',
+            `A guy from the loading dock shrugs. "Danny always talked about starting over somewhere — Vancouver, I think? Said the border thing wouldn't even be hard for someone who planned logistics for a living."
+
+It's the kind of thing a man says at a bar, not a plan. But it's something.`,
+            [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+      }},
+    ]
   );
 }
 
+// --- DMV / Vehicle Records (decoy, debunkable) ---
 function dmvNode(){
+  if (hasClue('airport_lead') && hasClue('airport_debunked')) {
+    return renderScene('DMV / Vehicle Records',
+      `You've squeezed everything out of the plate hit already. The clerk recognizes you now, which is its own kind of bad sign.`,
+      [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+  }
   renderScene(
     'DMV / Vehicle Records',
-    `License plates don't lie. But people who drive them do.`,
-    [{ label: 'Back to the case board →', action: () => goTo(hub) }]
+    `A license plate reader hit puts Danny's sedan at a parking facility a few days after he skipped. A friendly clerk pulls the full record.`,
+    [
+      { label: 'Take the hit at face value — he flew out.', action: () => {
+          addClue('airport_lead');
+          renderScene('DMV / Vehicle Records',
+            `The car's been sitting in the regional airport's long-term lot for over two weeks. Ticket stub in the window, exactly like a man who parked and never came back for it.
+
+Looks like he's long gone.`,
+            [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+      }},
+      { label: 'Cross-check flight manifests and lot security footage before you believe it.', action: () => {
+          addClue('airport_debunked');
+          renderScene('DMV / Vehicle Records',
+            `No one matching his description boarded anything out of that airport in the relevant window. Lot footage shows the car being dropped off by someone else entirely — a guy in a delivery uniform, gone in under two minutes.
+
+The car was planted. He was never getting on a plane.`,
+            [{ label: 'Back to the case board →', action: () => goTo(hub) }]);
+      }},
+    ]
   );
 }
 
+// ---------- Apprehend menu ----------
+
+function apprehendMenu(){
+  const options = [];
+
+  if (hasClue('cabin_lead')) {
+    options.push({ label: 'Drive out to the Millbrook lake cabin.', action: () => goTo(endCabin) });
+  }
+  if (hasClue('el_paso_lead') && !hasClue('el_paso_debunked')) {
+    options.push({ label: 'Stake out the El Paso bus departure.', action: () => goTo(endElPaso) });
+  }
+  if (hasClue('storage_lead') && !hasClue('storage_debunked')) {
+    options.push({ label: 'Sit on the storage unit and wait.', action: () => goTo(endStorage) });
+  }
+  if (hasClue('canada_lead')) {
+    options.push({ label: 'Alert border patrol contacts near Vancouver.', action: () => goTo(endCanada) });
+  }
+  if (hasClue('airport_lead') && !hasClue('airport_debunked')) {
+    options.push({ label: 'Flag his car at the airport long-term lot.', action: () => goTo(endAirport) });
+  }
+  if (goldenOaksReady()) {
+    options.push({ label: 'Stake out Golden Oaks Assisted Living, and hope it\'s Sunday.', action: () => goTo(sundayGateCheck) });
+  }
+
+  if (options.length === 0) {
+    return goTo(endNothing);
+  }
+
+  renderScene(
+    'The Last Move',
+    `You've got a shot to actually put hands on Danny Rourke, and no time to hedge. Based on everything you've gathered, where do you go?`,
+    options
+  );
+}
+
+// ---------- Sunday gate + true route confrontation ----------
+
+function sundayGateCheck(){
+  const info = dayInfo(MAX_MOVES - state.moves);
+  if (!info.isSunday) {
+    return renderScene(
+      'Golden Oaks Assisted Living',
+      `You post up outside Golden Oaks, and... nothing. It's ${info.dayName}, Week ${info.week} — visiting hours for a resident like Walter Kessler run Sunday mornings only, and someone at the front desk who's seen too many strangers loiter in the lot politely asks if you're lost.
+
+You clock the schedule now. If this is the right place, it's only right on a Sunday.`,
+      [{ label: 'Back to the case board →', action: () => goTo(hub) }]
+    );
+  }
+  return goTo(confrontGoldenOaks);
+}
+
+function confrontGoldenOaks(){
+  if (state.dannyWarned) {
+    return goTo(endWarnedGoldenOaks);
+  }
+  renderScene(
+    'Golden Oaks Assisted Living',
+    `Sunday, 8:40 AM. You're parked where you can see the entrance without being seen. At 8:52, a man in a ballcap walks up the path carrying a coffee and a paper bag that smells like cinnamon. He scans the lot once, out of habit more than suspicion, and doesn't clock you.
+
+It's him. He signs in at the desk as "Danny K." and heads down the hall toward a room where an old man in a wheelchair is already waiting by the window, hands trembling slightly in his lap — Walter Kessler. Walt Rourke. His father.
+
+You have maybe ninety seconds before this visit ends and he walks back out the way he came.`,
+    [
+      { label: 'Wait outside. Let him finish the visit, say goodbye properly, then take him quietly in the parking lot.', action: () => goTo(endTrueGood) },
+      { label: "Go in now. Identify yourself and cuff him right there, in front of his father.", action: () => goTo(endTrueFlawed) },
+    ]
+  );
+}
+
+// ---------- Endings ----------
+
+function endingWrap(badgeClass, badgeText, title, text){
+  state.ending = title;
+  renderScene(title,
+    `<span class="ending-badge ${badgeClass}">${badgeText}</span><br>${text}`,
+    [{ label: '↺ Start a new case', action: () => { state = freshState(); goTo(briefing); } }]
+  );
+}
+
+function endTrueGood(){
+  endingWrap('win', 'True Route — Clean Capture',
+    'The Right Call',
+    `You let him have the ninety seconds. Through the window you watch him crouch by the wheelchair, say something that makes the old man laugh, and press a cinnamon roll into his shaking hands.
+
+When he walks back out, you're leaning against his car. "Danny Rourke. Bond enforcement." He doesn't run. He doesn't even look surprised — just tired, in the way of someone who's been waiting for this since the day he left the courthouse. "Just — let me call my sister first. Tell her where Dad's meds are." You let him.
+
+Ray gets his hundred fifty grand back and doesn't ask how you found him. Walter Kessler never has to know his son's name is on a bond sheet. Danny goes back into custody without a mark on him, and for what it's worth, he thanks you for the ninety seconds on the way into the car.
+
+Some skips end messy. This one, for once, didn't have to.`
+  );
+}
+
+function endTrueFlawed(){
+  endingWrap('win-flawed', 'True Route — Bittersweet Capture',
+    'The Bounty, Not the Man',
+    `You go in. "Danny Rourke, you're in violation of your bond." His father's head snaps up at the noise, confused, frightened, asking Danny in a thin voice what's happening, why is this man yelling. Danny's jaw goes tight but he doesn't fight you — just keeps saying "It's okay, Dad, it's okay" over his shoulder as you walk him out past a room full of strangers who are all now staring.
+
+You collect the bounty. Ray's happy. The case closes clean on paper.
+
+But you catch Danny's eye in the rearview on the drive in, and there's nothing in it but contempt. "He's going to remember that as the last thing that happened to him that made sense," he says quietly, not looking at you. "Hope the check clears."
+
+You got your man. You're just not sure, driving back, that you got him the right way.`
+  );
+}
+
+function endWarnedGoldenOaks(){
+  endingWrap('lose', 'Escaped — Tipped Off',
+    'A Step Too Slow',
+    `You had it right. Golden Oaks, Sunday morning, Walter Kessler by the window — every piece fit. But when you get there, the room's empty except for the old man, alone, confused, asking a nurse why his son hasn't called.
+
+"He phoned last night," the nurse tells you when you ask. "Said something came up. Sounded scared."
+
+Angela made that call the second you left her porch. You had the right answer and the wrong approach on the way to it, and now Danny Rourke is in the wind with nothing left to lose and nowhere you know to look. Ray eats the bond. You eat the lesson.`
+  );
+}
+
+function endCabin(){
+  endingWrap('lose', 'Escaped — False Trail',
+    'The Empty Cabin',
+    `The Millbrook cabin is exactly where Carla said, and exactly as cold as you feared. Dust on the counters, a fireplace that hasn't been lit in weeks, a note on the table in handwriting that isn't Danny's: <span class="em">"Told her the cabin because she'd believe it and mean it. Didn't want her lying for me — didn't want her lying at all."</span>
+
+He knew she'd talk. He wanted her to. You just spent your last real shot proving how well he plans.
+
+Ray's bond forfeits. Somewhere, Danny Rourke is still moving.`
+  );
+}
+
+function endElPaso(){
+  endingWrap('lose', 'Escaped — False Trail',
+    'The Wrong Man',
+    `You stake out the platform, badge ready, and when a nervous man in a ballcap steps off toward the El Paso bus you take him down clean — only to find Danny's old, dead phone in his jacket pocket and a driver's license that says Mike Delgado.
+
+Mike doesn't even look surprised. "Told you I didn't know where he really went," he mutters, rubbing his wrist. He wasn't lying. He just wasn't the whole truth either — and you never dug past the ticket counter to find that out.
+
+The bond forfeits. Ray's not going to let you forget this one.`
+  );
+}
+
+function endStorage(){
+  endingWrap('lose', 'Escaped — False Trail',
+    'Waiting on a Stage Set',
+    `You sit on the storage unit for what's left of your window, certain someone will come back for the cash, the phone, something. Nobody does. Of course nobody does — there was never anything left to protect here, only something left to be found by exactly the kind of person patient enough to sit and watch.
+
+By the time you accept that, the deadline's already passed. Danny Rourke built you a diorama of a man running, and you spent your last shot admiring it.`
+  );
+}
+
+function endCanada(){
+  endingWrap('lose', 'Escaped — False Trail',
+    'A Bar Story, Not a Plan',
+    `Your border contacts flag every crossing near Vancouver for a week straight. Nothing. Eventually one of them calls back, half-amused: "You do know guys say all kinds of things at happy hour, right?"
+
+It was never a plan. It was a guy venting about his life to a coworker who happened to remember it. You spent your shot on a rumor with nothing behind it.`
+  );
+}
+
+function endAirport(){
+  endingWrap('lose', 'Escaped — False Trail',
+    'A Car, Not a Man',
+    `Airport security flags the vehicle the moment you ask, but there's no Danny Rourke on any flight, any manifest, any camera near a gate. Just a car, sitting in long-term parking, quietly running up a bill nobody's going to pay.
+
+You realize too late — a parked car proves a car was parked. Nothing else. The deadline runs out while you're still filling out the report.`
+  );
+}
+
+function endNothing(){
+  endingWrap('lose', 'Case Cold',
+    'Nothing to Go On',
+    `You've burned your moves without turning up a single thread worth pulling on. When you finally call it, Ray just sighs into the phone. <span class="em">"Twenty days, and you've got nothing? He's probably three states away by now."</span>
+
+The bond forfeits. Danny Rourke's file goes into a drawer with a hundred others just like it — a man who got away not because he was smarter than you, but because you never gave the real clues a chance to add up.`
+  );
+}
+
+function endTimeout(){
+  endingWrap('lose', 'Case Cold — Time Expired',
+    "Ray's Out a Hundred Fifty Grand",
+    `Day twenty comes and goes with no arrest made. Ray doesn't even raise his voice — just closes the folder on his desk with the particular quiet of a man used to losing money to people smarter than the system gives them credit for.
+
+<span class="em">"He's gone. Whatever you were chasing, it wasn't fast enough."</span>
+
+Somewhere out there, on a Sunday morning, an old man is still waiting by a window for a coffee and a cinnamon roll that, for now, still comes.`
+  );
+}
+
+// ---------- Boot ----------
+
+function boot(){
+  const loaded = load();
+  state = loaded || freshState();
+  const nodeMap = {
+    briefing, hub, carlaNode, apartmentNode, dinerNode, depotNode, storageNode, angelaNode, meridianNode, dmvNode,
+    apprehendMenu, sundayGateCheck, confrontGoldenOaks,
+    endTrueGood, endTrueFlawed, endWarnedGoldenOaks, endCabin, endElPaso, endStorage, endCanada, endAirport, endNothing, endTimeout
+  };
+  const fn = nodeMap[state.node] || briefing;
+  goTo(fn);
+}
+
+document.getElementById('restart-btn').onclick = () => {
+  state = freshState();
+  goTo(briefing);
+};
+
+boot();
+</script>
+<script data-cochat-helper="true">
+// Dark mode sync from parent
+window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'darkMode') {
+        document.documentElement.classList.toggle('dark', e.data.dark);
+    }
+});
+
+// CoChat helpers — bridge to the parent window for authenticated calls.
+// The artifact iframe has no ``allow-same-origin``, so localStorage and
+// direct same-origin fetches with auth do not work here. The parent
+// attaches the user's token, picks a model (preferring the active chat's
+// selection over a platform default), and proxies to an allow-listed
+// endpoint. If your caller wants to pin a specific model id, set
+// ``window._cochatModel = '<model-id>'`` before invoking ``cochat.ask``.
+(function() {
+    var _pending = {};
+    var _seq = 0;
+    var _BRIDGE_TIMEOUT_MS = 30000;
+
+    function _newRequestId() {
+        _seq += 1;
+        return 'cochat-' + Date.now().toString(36) + '-' + _seq.toString(36);
+    }
+
+    window.addEventListener('message', function(e) {
+        var data = e.data;
+        if (!data || data.type !== 'cochat:bridge:response') return;
+        var pending = _pending[data.requestId];
+        if (!pending) return;
+        delete _pending[data.requestId];
+        clearTimeout(pending.timer);
+        if (data.error) {
+            pending.reject(new Error(data.error));
+        } else {
+            pending.resolve(data);
+        }
+    });
+
+    function _bridge(message) {
+        return new Promise(function(resolve, reject) {
+            if (!window.parent || window.parent === window) {
+                reject(new Error('CoChat bridge unavailable: no parent window'));
+                return;
+            }
+            var requestId = _newRequestId();
+            var timer = setTimeout(function() {
+                if (_pending[requestId]) {
+                    delete _pending[requestId];
+                    reject(new Error('CoChat bridge timed out after 30s'));
+                }
+            }, _BRIDGE_TIMEOUT_MS);
+            _pending[requestId] = { resolve: resolve, reject: reject, timer: timer };
+            try {
+                window.parent.postMessage(
+                    Object.assign({ requestId: requestId }, message),
+                    '*'
+                );
+            } catch (err) {
+                delete _pending[requestId];
+                clearTimeout(timer);
+                reject(err);
+            }
+        });
+    }
+
+    window.cochat = {
+        // Call the LLM. The parent attaches auth and uses the current chat's model.
+        // Usage: const reply = await cochat.ask("What is 2+2?", {system: "..."});
+        ask: async function(prompt, options) {
+            options = options || {};
+            var model = (options && options.model) || window._cochatModel || '';
+            var resp = await _bridge({
+                type: 'cochat:ask',
+                prompt: prompt,
+                system: options.system || '',
+                model: model
+            });
+            if (resp && typeof resp.content === 'string') return resp.content;
+            return '';
+        },
+
+        // Proxied external HTTP call. Goes through /api/proxy parent-side.
+        // Usage: const r = await cochat.fetch({method:'GET', url:'https://api.example.com/x'});
+        fetch: async function(opts) {
+            opts = opts || {};
+            var resp = await _bridge({
+                type: 'cochat:proxy',
+                method: opts.method || 'GET',
+                url: opts.url || '',
+                headers: opts.headers || {},
+                body: typeof opts.body === 'string' ? opts.body : (opts.body == null ? '' : JSON.stringify(opts.body))
+            });
+            return {
+                ok: !!resp.ok,
+                status: resp.status || 0,
+                headers: resp.headers || {},
+                body: resp.body || '',
+                json: function() {
+                    try { return JSON.parse(resp.body || ''); } catch (e) { return null; }
+                }
+            };
+        }
+    };
+})();
 </script>
 </body>
 </html>
