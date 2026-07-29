@@ -691,9 +691,10 @@ function hub(){
     {id:'dmv', name:'DMV / Vehicle Records', desc:"Trace his car's plate.", node: dmvNode},
   ];
 
-  const nextDay = dayInfo((MAX_MOVES - state.moves) + 1);
-  let dayNote = `<span class="${nextDay.isSunday ? 'sun' : ''}">Next move lands on Week ${nextDay.week}, ${nextDay.dayName}${nextDay.isSunday ? ' — visiting hours are open at Golden Oaks today, if you're ready.' : '.'}</span>`;
-
+  // around line ~694
+const nextDay = dayInfo((MAX_MOVES - state.moves) + 1);
+let dayNote = `<span class="${nextDay.isSunday ? 'sun' : ''}">Next move lands on Week ${nextDay.week}, ${nextDay.dayName}${nextDay.isSunday ? ' — visiting hours are open at Golden Oaks today, if you want to follow that tip.' : ''}</span>`;
+  
   let html = `You're back at the case board. <span class="em">${state.moves}</span> move${state.moves===1?'':'s'} left before Ray writes this off. Where do you spend it?`;
   if (state.moves === 1) {
     html += ` <span class="em">This is your last move — spend it investigating and the clock runs out with nobody in cuffs. If you're ready, apprehend now instead.</span>`;
