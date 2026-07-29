@@ -692,12 +692,13 @@ function hub(){
   ];
 
   const nextDay = dayInfo((MAX_MOVES - state.moves) + 1);
-  let dayNote = `<span class="${nextDay.isSunday ? 'sun' : ''}">Next move lands on Week ${nextDay.week}, ${nextDay.dayName}${nextDay.isSunday ? ' — visiting hours are open at Golden Oaks today, if you're ready.' : '.'}</span>`;
+  let dayNote = `<span class="${nextDay.isSunday ? 'sun' : ''}">Next move lands on Week ${nextDay.week}, ${nextDay.dayName}${nextDay.isSunday ? ' — visiting hours are open at Golden Oaks today.' : ''}</span>`;
 
   let html = `You're back at the case board. <span class="em">${state.moves}</span> move${state.moves===1?'':'s'} left before Ray writes this off. Where do you spend it?`;
   if (state.moves === 1) {
-    html += ` <span class="${nextDay.isSunday ? 'sun' : ''}">Next move lands on Week ${nextDay.week}, ${nextDay.dayName}${nextDay.isSunday ? ' — visiting hours are open at Golden Oaks today.' : ''}</span>;
+    html += ` <span class="${nextDay.isSunday ? 'sun' : ''}">Next move lands on Week ${nextDay.week}, ${nextDay.dayName}${nextDay.isSunday ? ' — visiting hours are open at Golden Oaks today.' : ''}</span>`;
   }
+    
   renderScene('Case Board', html, [], dayNote);
 
   const cEl = document.getElementById('choices');
